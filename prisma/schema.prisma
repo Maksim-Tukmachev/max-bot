@@ -1,0 +1,185 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum TicketStatus {
+  NEW
+  IN_PROGRESS
+  WAITING_USER
+  POSTPONED
+  RESOLVED
+  CLOSED
+}
+
+enum CommentVisibility {
+  INTERNAL
+  USER
+}
+
+enum SessionState {
+  IDLE
+  SELECT_BRANCH
+  ENTER_ROOM
+  ENTER_DESCRIPTION
+  CONFIRM
+  ENTER_COMMENT
+  ENTER_TICKET_NUMBER
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  maxUserId   BigInt   @unique
+  displayName String   @db.VarChar(200)
+  role        Role     @default(USER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  tickets         Ticket[]              @relation("TicketAuthor")
+  assignedTickets Ticket[]              @relation("TicketAssignee")
+  comments        TicketComment[]
+  attachments     TicketAttachment[]
+  statusChanges   TicketStatusHistory[]
+  auditLogs       AuditLog[]
+  session         UserSession?
+  createdCodes    AdminActivationCode[] @relation("CodeCreator")
+  usedCodes       AdminActivationCode[] @relation("CodeUser")
+
+  @@index([role, isActive])
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(200)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id              Int          @id @default(autoincrement())
+  number          Int          @unique @default(autoincrement())
+  userId          Int
+  branchId        Int
+  room            String       @db.VarChar(100)
+  description     String       @db.VarChar(2000)
+  status          TicketStatus @default(NEW)
+  assignedAdminId Int?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  acceptedAt      DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+
+  user          User                  @relation("TicketAuthor", fields: [userId], references: [id])
+  assignedAdmin User?                 @relation("TicketAssignee", fields: [assignedAdminId], references: [id])
+  branch        Branch                @relation(fields: [branchId], references: [id])
+  comments      TicketComment[]
+  history       TicketStatusHistory[]
+  attachments   TicketAttachment[]
+
+  @@index([status, createdAt])
+  @@index([assignedAdminId, status])
+  @@index([userId, status])
+}
+
+model TicketAttachment {
+  id           Int      @id @default(autoincrement())
+  ticketId     Int
+  uploadedById Int
+  /// token изображения MAX: по нему картинка пересылается без хранения файла у нас
+  token        String   @db.VarChar(500)
+  photoId      BigInt?
+  createdAt    DateTime @default(now())
+
+  ticket     Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy User   @relation(fields: [uploadedById], references: [id])
+
+  @@index([ticketId])
+}
+
+model TicketComment {
+  id         Int               @id @default(autoincrement())
+  ticketId   Int
+  authorId   Int
+  text       String            @db.VarChar(2000)
+  visibility CommentVisibility
+  createdAt  DateTime          @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId, createdAt])
+}
+
+model TicketStatusHistory {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int
+  oldStatus TicketStatus?
+  newStatus TicketStatus
+  changedBy Int
+  createdAt DateTime      @default(now())
+
+  ticket  Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  changer User   @relation(fields: [changedBy], references: [id])
+
+  @@index([ticketId, createdAt])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?
+  action     String   @db.VarChar(64)
+  entityType String   @db.VarChar(64)
+  entityId   String?  @db.VarChar(64)
+  metadata   Json?
+  ipAddress  String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}
+
+model ProcessedWebhook {
+  id              Int      @id @default(autoincrement())
+  externalEventId String   @unique @db.VarChar(200)
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model UserSession {
+  userId    Int          @id
+  state     SessionState @default(IDLE)
+  draft     Json?
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdminActivationCode {
+  id          Int       @id @default(autoincrement())
+  codeHash    String    @unique @db.VarChar(64)
+  createdById Int?
+  usedById    Int?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  createdBy User? @relation("CodeCreator", fields: [createdById], references: [id])
+  usedBy    User? @relation("CodeUser", fields: [usedById], references: [id])
+}

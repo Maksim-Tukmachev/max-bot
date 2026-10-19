@@ -1,0 +1,33 @@
+import { LIMITS, PATIENT_DATA_WARNING, PHOTO_WARNING } from '../config/constants';
+
+export const MSG = {
+  menuTitle: (name: string) => `Здравствуйте, ${name}! Выберите действие:`,
+  pickBranch: 'Выберите филиал:',
+  askRoom: 'Укажите номер кабинета:',
+  askDescription: `Опишите проблему. Можно приложить до ${LIMITS.MAX_PHOTOS} фото.\n\n⚠️ ${PATIENT_DATA_WARNING}\n${PHOTO_WARNING}`,
+  photoAdded: (n: number) => `📷 Фото добавлено (${n}/${LIMITS.MAX_PHOTOS}). Отправьте описание проблемы текстом (можно ещё фото).`,
+  photoLimit: `Максимум ${LIMITS.MAX_PHOTOS} фото. Лишние не добавлены.`,
+  onlyImages: 'Поддерживаются только фото (изображения).',
+  noPhotos: 'У заявки нет фото.',
+  created: (n: number) => `✅ Заявка #${n} создана. Мы уведомим вас об изменении статуса.`,
+  cancelled: 'Создание заявки отменено.',
+  noTickets: 'Заявок нет.',
+  listActive: (total: number) => `Активные заявки (${total}):`,
+  listClosed: (total: number) => `Закрытые заявки (${total}):`,
+  queueTitle: (title: string, total: number) => `${title} (${total}):`,
+  askComment: 'Напишите комментарий текстом:',
+  askReply: 'Напишите ответ текстом:',
+  askTicketNumber: 'Введите номер заявки:',
+  commentSaved: 'Комментарий добавлен.',
+  replySaved: 'Ответ отправлен.',
+  accepted: 'Заявка принята в работу.',
+  alreadyTaken: 'Заявку уже принял другой администратор.',
+  invalidAction: 'Действие недоступно.',
+  accessDisabled: 'Доступ к боту отключён. Обратитесь к администратору.',
+  tooManyRequests: 'Слишком много действий. Подождите минуту.',
+  activated: '✅ Вы назначены администратором.',
+  activateUsage: 'Использование: /activate КОД',
+  codeCreated: (code: string, hours: number) =>
+    `Код активации (одноразовый, действует ${hours} ч):\n\n${code}\n\nНовый администратор отправляет боту: /activate ${code}`,
+  myId: (userId: number | undefined, chatId: number | undefined) => `Ваш user_id: ${userId ?? '—'}\nchat_id: ${chatId ?? '—'}`,
+} as const;
