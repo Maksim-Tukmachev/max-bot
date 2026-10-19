@@ -5,6 +5,5 @@ dist/
 !.env.example
 backups/*
 !backups/.gitkeep
-certs/
 *.log
 coverage/

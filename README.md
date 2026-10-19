@@ -42,44 +42,43 @@
 
 ## 3. Установка Docker
 
-Названия пакетов зависят от версии РЕД ОС — сначала проверьте, что есть в репозиториях:
+По официальной инструкции РЕД ОС 7.3 ([Установка и настройка docker](https://redos.red-soft.ru/base/redos-7_3/7_3-administation/7_3-containers/7_3-docker-install/); в ней версии `docker-ce` / `docker-ce-cli` 28.1.1):
 
 ```bash
-sudo dnf search docker
+sudo dnf install -y docker-ce docker-ce-cli
+sudo systemctl enable docker --now
+systemctl status docker      # должно быть active (running)
+docker info
 ```
 
-Вариант А — из репозиториев РЕД ОС (если есть `docker` и `docker-compose-plugin`):
+Работа без `sudo`: пользователь добавляется в группу `docker` (создаётся при установке; группа даёт права, эквивалентные root, — только для доверенных администраторов). После команды нужно выйти из сессии и зайти снова:
 
 ```bash
-sudo dnf install -y docker docker-compose-plugin
+sudo usermod -aG docker $USER
 ```
 
-Вариант Б — официальный репозиторий Docker для RHEL-совместимых систем:
+**Docker Compose.** В статье РЕД ОС плагин `docker compose` не описан. Проверьте:
 
 ```bash
-sudo dnf install -y dnf-plugins-core
-sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+docker compose version
 ```
 
-Запуск и автозапуск:
+Если команда не найдена, поищите пакет в репозиториях (`sudo dnf search docker-compose`) и установите его (`docker-compose-plugin`, если он есть). Проект рассчитан на Compose v2 — команду `docker compose` (через пробел).
 
-```bash
-sudo systemctl enable --now docker
+**Если Docker Hub недоступен** (образы `node`, `postgres` не скачиваются), РЕД ОС рекомендует настроить зеркало: в `/etc/docker/daemon.json` добавьте
+
+```json
+{ "registry-mirrors": ["https://mirror.gcr.io/"] }
 ```
+
+и выполните `sudo systemctl daemon-reload && sudo systemctl restart docker`.
 
 Проверка:
 
 ```bash
 docker --version
 docker compose version
-sudo docker run --rm hello-world
-```
-
-Чтобы работать без `sudo`, добавьте пользователя в группу `docker` (эта группа даёт права, эквивалентные root, — только для доверенных администраторов):
-
-```bash
-sudo usermod -aG docker $USER   # затем перелогиньтесь
+docker run --rm hello-world
 ```
 
 ## 4. Развёртывание
