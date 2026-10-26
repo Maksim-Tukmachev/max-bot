@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MaxMode } from './constants';
+import { isValidTimezone } from './timezone';
 
 const secretRegex = /^[A-Za-z0-9_-]{5,256}$/;
 
@@ -13,6 +14,7 @@ const schema = z
     MAX_MODE: z.nativeEnum(MaxMode).default(MaxMode.Polling),
     MAX_WEBHOOK_DOMAIN: z.string().optional(),
     MAX_WEBHOOK_SECRET: z.string().regex(secretRegex).optional(),
+    REPORT_TIMEZONE: z.string().refine(isValidTimezone, 'неизвестный часовой пояс (пример: Europe/Moscow)').optional(),
     SUPERADMIN_MAX_USER_ID: z
       .string()
       .regex(/^\d{1,18}$/, 'SUPERADMIN_MAX_USER_ID должен быть числом')

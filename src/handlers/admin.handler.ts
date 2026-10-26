@@ -44,7 +44,6 @@ export class AdminHandler {
   }
 
   async open(admin: User, number: number, res: Responder): Promise<void> {
-    await this.sessions.reset(admin);
     await res.show(this.card(admin, await this.admin.find(admin, number)));
   }
 

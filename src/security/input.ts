@@ -11,6 +11,7 @@ const text = (max: number) =>
 export const roomSchema = text(LIMITS.ROOM_MAX);
 export const descriptionSchema = text(LIMITS.DESCRIPTION_MAX);
 export const commentSchema = text(LIMITS.COMMENT_MAX);
+export const archiveQuerySchema = text(LIMITS.ARCHIVE_QUERY_MAX);
 export const ticketNumberSchema = z.coerce.number().int().min(1).max(LIMITS.TICKET_NUMBER_MAX);
 export const activationCodeSchema = z
   .string()
@@ -29,6 +30,9 @@ export const draftSchema = z.object({
   description: z.string().max(LIMITS.DESCRIPTION_MAX).optional(),
   ticketNumber: z.number().int().optional(),
   commentKind: z.enum(['internal', 'user']).optional(),
+  archiveQuery: z.string().max(LIMITS.ARCHIVE_QUERY_MAX).optional(),
+  archivePeriod: z.enum(['t', 'w', 'm', 'a']).optional(),
+  archiveBranch: z.number().int().optional(),
   photos: z.array(photoSchema).max(LIMITS.MAX_PHOTOS).optional(),
 });
 export type Draft = z.infer<typeof draftSchema>;

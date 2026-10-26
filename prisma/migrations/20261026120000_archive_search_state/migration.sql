@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SessionState" ADD VALUE 'ENTER_ARCHIVE_QUERY';

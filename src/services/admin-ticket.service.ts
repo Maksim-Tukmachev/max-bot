@@ -5,7 +5,7 @@ import { Permission } from '../domain/permissions';
 import { IN_WORK_STATUSES, canTransition } from '../domain/ticket-transitions';
 import { CommentRepository } from '../repositories/comment.repository';
 import { TicketHistoryRepository } from '../repositories/ticket-history.repository';
-import { TicketRepository, type TicketListFilter, type TicketWithRelations } from '../repositories/ticket.repository';
+import { TicketRepository, type ArchiveFilter, type TicketListFilter, type TicketWithRelations } from '../repositories/ticket.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { commentSchema, parseInput } from '../security/input';
 import type { QueueKind } from '../security/callback-data';
@@ -44,6 +44,12 @@ export class AdminTicketService {
       all: {},
     };
     const { items, total } = await this.tickets.list(this.prisma, filters[kind], page * LIMITS.PAGE_SIZE, LIMITS.PAGE_SIZE);
+    return { items, total, page, pages: Math.max(1, Math.ceil(total / LIMITS.PAGE_SIZE)) };
+  }
+
+  async archive(admin: User, filter: ArchiveFilter, page: number): Promise<Page<TicketWithRelations>> {
+    await this.permissions.require(admin, Permission.ViewArchive);
+    const { items, total } = await this.tickets.listArchive(this.prisma, filter, page * LIMITS.PAGE_SIZE, LIMITS.PAGE_SIZE);
     return { items, total, page, pages: Math.max(1, Math.ceil(total / LIMITS.PAGE_SIZE)) };
   }
 

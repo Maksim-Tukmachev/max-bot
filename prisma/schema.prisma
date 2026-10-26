@@ -36,6 +36,7 @@ enum SessionState {
   CONFIRM
   ENTER_COMMENT
   ENTER_TICKET_NUMBER
+  ENTER_ARCHIVE_QUERY
 }
 
 model User {

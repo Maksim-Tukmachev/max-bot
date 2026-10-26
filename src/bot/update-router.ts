@@ -5,6 +5,8 @@ import { parseCallback, type CallbackAction } from '../security/callback-data';
 import type { PermissionService } from '../services/permission.service';
 import type { SessionService } from '../services/session.service';
 import type { AdminHandler } from '../handlers/admin.handler';
+import type { ArchiveHandler } from '../handlers/archive.handler';
+import type { StatsHandler } from '../handlers/stats.handler';
 import type { SuperHandler } from '../handlers/super.handler';
 import type { UserHandler } from '../handlers/user.handler';
 import { AppError, ForbiddenError, GENERIC_ERROR_MESSAGE } from '../utils/errors';
@@ -28,6 +30,8 @@ export class UpdateRouter {
     private readonly users: UserHandler,
     private readonly admin: AdminHandler,
     private readonly superH: SuperHandler,
+    private readonly stats: StatsHandler,
+    private readonly archive: ArchiveHandler,
     private readonly sessions: SessionService,
     private readonly permissions: PermissionService,
     private readonly log: Logger,
@@ -84,7 +88,8 @@ export class UpdateRouter {
       case 'user_list':
         return this.users.list(user, action.kind, action.page, res);
       case 'ticket_open':
-        await this.sessions.reset(user);
+        // Сохраняем «спокойный» черновик (например, поисковый запрос архива); сбрасываем только ожидание ввода.
+        if ((await this.sessions.get(user)).state !== SessionState.IDLE) await this.sessions.reset(user);
         return isAdminRole(user.role) ? this.admin.open(user, action.number, res) : this.users.openOwnTicket(user, action.number, res);
       case 'ticket_reply':
         return this.users.startReply(user, action.number, res);
@@ -106,6 +111,16 @@ export class UpdateRouter {
         return this.admin.queue(user, action.kind, action.page, res);
       case 'admin_find':
         return this.admin.startFind(user, res);
+      case 'admin_stats_menu':
+        return this.stats.menu(user, res);
+      case 'admin_stats':
+        return this.stats.show(user, action.view, action.idx, res);
+      case 'admin_archive':
+        return this.archive.show(user, action.period, action.branchId, action.page, action.useQuery, res);
+      case 'admin_archive_branches':
+        return this.archive.pickBranch(user, action.period, action.useQuery, res);
+      case 'admin_archive_search':
+        return this.archive.startSearch(user, action.period, action.branchId, res);
       case 'admin_accept':
         return this.admin.accept(user, action.number, res);
       case 'admin_status_menu':
@@ -149,6 +164,11 @@ export class UpdateRouter {
       } else {
         await this.users.onReplyText(user, ticketNumber, text, res);
       }
+      return false;
+    }
+    if (session.state === SessionState.ENTER_ARCHIVE_QUERY) {
+      if (!(await this.guardAdmin(user))) return false;
+      await this.archive.onSearchText(user, text, res);
       return false;
     }
     if (session.state === SessionState.ENTER_TICKET_NUMBER) {

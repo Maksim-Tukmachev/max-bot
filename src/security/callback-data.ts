@@ -5,6 +5,9 @@ import { LIMITS } from '../config/constants';
 export type QueueKind = 'new' | 'prog' | 'mine' | 'all';
 export type UserListKind = 'active' | 'closed';
 export type CommentKind = 'internal' | 'user';
+export type StatsView = 'overview' | 'days' | 'weeks' | 'staff' | 'users';
+export type StatsIndex = 1 | 2 | 3;
+export type ArchivePeriod = 't' | 'w' | 'm' | 'a';
 
 /** Типизированный результат разбора payload кнопки. Всё, что не распознано, — `null`. */
 export type CallbackAction =
@@ -28,6 +31,11 @@ export type CallbackAction =
   | { type: 'admin_transfer_menu'; number: number }
   | { type: 'admin_transfer_to'; number: number; adminId: number }
   | { type: 'admin_history'; number: number }
+  | { type: 'admin_stats_menu' }
+  | { type: 'admin_stats'; view: StatsView; idx: StatsIndex }
+  | { type: 'admin_archive'; period: ArchivePeriod; branchId: number; page: number; useQuery: boolean }
+  | { type: 'admin_archive_branches'; period: ArchivePeriod; useQuery: boolean }
+  | { type: 'admin_archive_search'; period: ArchivePeriod; branchId: number }
   | { type: 'super_admins' }
   | { type: 'super_code' }
   | { type: 'super_disable'; adminId: number };
@@ -48,6 +56,9 @@ const CODE_BY_STATUS = Object.fromEntries(Object.entries(STATUS_CODES).map(([k, 
 export const statusToCode = (s: TicketStatus): string => CODE_BY_STATUS[s] ?? '';
 
 const QUEUES = new Set<string>(['new', 'prog', 'mine', 'all']);
+const STATS_VIEW_CODE: Readonly<Record<StatsView, string>> = { overview: 'o', days: 'd', weeks: 'w', staff: 'e', users: 'u' };
+const STATS_VIEW_BY_CODE = Object.fromEntries(Object.entries(STATS_VIEW_CODE).map(([k, v]) => [v, k])) as Record<string, StatsView>;
+const ARCHIVE_PERIODS = new Set<string>(['t', 'w', 'm', 'a']);
 
 export const cb = {
   menu: 'm',
@@ -62,6 +73,11 @@ export const cb = {
   ticketPhotos: (n: number) => `t:ph:${n}`,
   adminQueue: (kind: QueueKind, p = 0) => `a:q:${kind}:${p}`,
   adminFind: 'a:find',
+  adminStatsMenu: 'a:s',
+  adminStats: (view: StatsView, idx: StatsIndex) => `a:s:${STATS_VIEW_CODE[view]}:${idx}`,
+  adminArchive: (period: ArchivePeriod, branchId = 0, page = 0, useQuery = false) => `a:ar:${period}:${branchId}:${page}:${useQuery ? 1 : 0}`,
+  adminArchiveBranches: (period: ArchivePeriod, useQuery = false) => `a:arb:${period}:${useQuery ? 1 : 0}`,
+  adminArchiveSearch: (period: ArchivePeriod, branchId = 0) => `a:ars:${period}:${branchId}`,
   adminAccept: (n: number) => `a:acc:${n}`,
   adminStatusMenu: (n: number) => `a:st:${n}`,
   adminStatusSet: (n: number, s: TicketStatus) => `a:st:${n}:${statusToCode(s)}`,
@@ -119,6 +135,24 @@ export function parseCallback(payload: string | undefined | null): CallbackActio
     }
     case 'a': {
       if (b === 'find' && p.length === 2) return { type: 'admin_find' };
+      if (b === 's' && p.length === 2) return { type: 'admin_stats_menu' };
+      if (b === 's' && p.length === 4) {
+        const view = c ? STATS_VIEW_BY_CODE[c] : undefined;
+        const idx = Number(d);
+        return view && (idx === 1 || idx === 2 || idx === 3) ? { type: 'admin_stats', view, idx } : null;
+      }
+      if (b === 'ar' && p.length === 6 && c && ARCHIVE_PERIODS.has(c) && (p[5] === '0' || p[5] === '1')) {
+        const branchId = num(d, id);
+        const pg = num(p[4], page);
+        return branchId === null || pg === null ? null : { type: 'admin_archive', period: c as ArchivePeriod, branchId, page: pg, useQuery: p[5] === '1' };
+      }
+      if (b === 'arb' && p.length === 4 && c && ARCHIVE_PERIODS.has(c) && (d === '0' || d === '1')) {
+        return { type: 'admin_archive_branches', period: c as ArchivePeriod, useQuery: d === '1' };
+      }
+      if (b === 'ars' && p.length === 4 && c && ARCHIVE_PERIODS.has(c)) {
+        const branchId = num(d, id);
+        return branchId === null ? null : { type: 'admin_archive_search', period: c as ArchivePeriod, branchId };
+      }
       if (b === 'q' && p.length === 4 && c && QUEUES.has(c)) {
         const pg = num(d, page);
         return pg === null ? null : { type: 'admin_queue', kind: c as QueueKind, page: pg };

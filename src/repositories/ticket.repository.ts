@@ -16,6 +16,15 @@ export interface TicketListFilter {
   assignedAdminId?: number;
 }
 
+/** Prisma `contains` не экранирует % и _ — делаем это сами, чтобы поиск был буквальным. */
+export const escapeLike = (value: string): string => value.replace(/[\\%_]/g, '\\$&');
+
+export interface ArchiveFilter {
+  since: Date | null;
+  branchId: number | null;
+  query: string | null;
+}
+
 export interface PhotoData {
   token: string;
   photoId?: number;
@@ -31,6 +40,29 @@ export interface CreateTicketData {
 export class TicketRepository {
   create(db: Db, data: CreateTicketData): Promise<TicketWithRelations> {
     return db.ticket.create({ data, include: ticketInclude });
+  }
+
+  /** Закрытые заявки по убыванию даты закрытия. Поиск — параметризованный ILIKE (Prisma экранирует % и _). */
+  async listArchive(db: Db, filter: ArchiveFilter, skip: number, take: number): Promise<{ items: TicketWithRelations[]; total: number }> {
+    const where: Prisma.TicketWhereInput = {
+      status: TicketStatus.CLOSED,
+      ...(filter.since ? { closedAt: { gte: filter.since } } : {}),
+      ...(filter.branchId !== null ? { branchId: filter.branchId } : {}),
+      ...(filter.query
+        ? {
+            OR: [
+              { description: { contains: escapeLike(filter.query), mode: 'insensitive' } },
+              { room: { contains: escapeLike(filter.query), mode: 'insensitive' } },
+              { user: { displayName: { contains: escapeLike(filter.query), mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+    const [items, total] = await Promise.all([
+      db.ticket.findMany({ where, include: ticketInclude, orderBy: [{ closedAt: 'desc' }, { id: 'desc' }], skip, take }),
+      db.ticket.count({ where }),
+    ]);
+    return { items, total };
   }
 
   async addAttachments(db: Db, ticketId: number, uploadedById: number, photos: readonly PhotoData[]): Promise<void> {

@@ -4,7 +4,11 @@ import { LIMITS } from './config/constants';
 import { registerBot } from './bot/bot';
 import { UpdateRouter } from './bot/update-router';
 import { AdminHandler } from './handlers/admin.handler';
+import { ArchiveHandler } from './handlers/archive.handler';
+import { StatsHandler } from './handlers/stats.handler';
 import { SuperHandler } from './handlers/super.handler';
+import { StatsRepository } from './repositories/stats.repository';
+import { StatsService } from './services/stats.service';
 import { UserHandler } from './handlers/user.handler';
 import { UserRateLimiter } from './middleware/user-rate-limit';
 import { ActivationCodeRepository } from './repositories/activation-code.repository';
@@ -39,6 +43,7 @@ export interface Container {
   permissions: PermissionService;
   notifications: NotificationService;
   limiter: UserRateLimiter;
+  stats: StatsService;
   router: UpdateRouter;
 }
 
@@ -63,16 +68,20 @@ export function buildContainer(prisma: PrismaClient, messenger: Messenger, log: 
   const dedupe = new WebhookDedupeService(prisma, new WebhookRepository());
   const limiter = new UserRateLimiter(LIMITS.USER_ACTIONS_PER_MINUTE);
 
+  const stats = new StatsService(prisma, new StatsRepository(), permissions);
+
   const router = new UpdateRouter(
     new UserHandler(prisma, tickets, sessions, branchRepo),
     new AdminHandler(adminTickets, sessions, users),
     new SuperHandler(users, activation),
+    new StatsHandler(stats),
+    new ArchiveHandler(prisma, adminTickets, sessions, branchRepo),
     sessions,
     permissions,
     log,
   );
 
-  return { users, tickets, adminTickets, activation, sessions, dedupe, audit, permissions, notifications, limiter, router };
+  return { users, tickets, adminTickets, activation, sessions, dedupe, audit, permissions, notifications, limiter, stats, router };
 }
 
 export function wireBot(bot: Bot, c: Container, log: Logger): void {

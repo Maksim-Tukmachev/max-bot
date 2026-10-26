@@ -23,3 +23,18 @@ describe('parseCallback', () => {
     }
   });
 });
+
+describe('parseCallback: статистика и архив', () => {
+  it('round-trip', () => {
+    expect(parseCallback(cb.adminStatsMenu)).toEqual({ type: 'admin_stats_menu' });
+    expect(parseCallback(cb.adminStats('staff', 3))).toEqual({ type: 'admin_stats', view: 'staff', idx: 3 });
+    expect(parseCallback(cb.adminArchive('m', 2, 3, true))).toEqual({ type: 'admin_archive', period: 'm', branchId: 2, page: 3, useQuery: true });
+    expect(parseCallback(cb.adminArchiveBranches('w', false))).toEqual({ type: 'admin_archive_branches', period: 'w', useQuery: false });
+    expect(parseCallback(cb.adminArchiveSearch('a', 4))).toEqual({ type: 'admin_archive_search', period: 'a', branchId: 4 });
+  });
+  it('отвергает подделки', () => {
+    for (const bad of ['a:s:x:1', 'a:s:o:4', 'a:s:o:0', 'a:s:o:1:1', 'a:ar:z:0:0:0', 'a:ar:a:-1:0:0', 'a:ar:a:0:0:2', 'a:ar:a:0:0', 'a:arb:a:2', 'a:ars:q:0']) {
+      expect(parseCallback(bad)).toBeNull();
+    }
+  });
+});

@@ -21,7 +21,11 @@ export function mainMenuKeyboard(user: User): KeyboardDef {
         { text: '👤 Мои заявки', payload: cb.adminQueue('mine') },
         { text: '📋 Все заявки', payload: cb.adminQueue('all') },
       ],
-      [{ text: '🔎 Найти заявку', payload: cb.adminFind }],
+      [
+        { text: '🔎 Найти заявку', payload: cb.adminFind },
+        { text: '🗄 Архив заявок', payload: cb.adminArchive('m') },
+      ],
+      [{ text: '📊 Статистика', payload: cb.adminStatsMenu }],
     );
   }
   if (user.role === Role.SUPERADMIN) {

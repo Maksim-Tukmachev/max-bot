@@ -1,4 +1,5 @@
 import { LIMITS } from '../config/constants';
+import { REPORT_TZ } from '../config/timezone';
 
 /** Убирает управляющие символы, схлопывает пробелы, обрезает края. */
 export function normalizeText(input: string): string {
@@ -26,7 +27,7 @@ export function splitMessage(text: string, max: number = LIMITS.MAX_MESSAGE_LENG
 
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('ru-RU', {
-    timeZone: 'Europe/Moscow',
+    timeZone: REPORT_TZ,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

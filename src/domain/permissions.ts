@@ -8,6 +8,9 @@ export enum Permission {
   CommentTicket = 'COMMENT_TICKET',
   TransferTicket = 'TRANSFER_TICKET',
   ViewAnyTicket = 'VIEW_ANY_TICKET',
+  ViewStats = 'VIEW_STATS',
+  ViewAllStats = 'VIEW_ALL_STATS',
+  ViewArchive = 'VIEW_ARCHIVE',
   ManageAdmins = 'MANAGE_ADMINS',
 }
 
@@ -20,12 +23,14 @@ const ADMIN_PERMISSIONS: readonly Permission[] = [
   Permission.CommentTicket,
   Permission.TransferTicket,
   Permission.ViewAnyTicket,
+  Permission.ViewStats,
+  Permission.ViewArchive,
 ];
 
 const BY_ROLE: Readonly<Record<Role, readonly Permission[]>> = {
   USER: USER_PERMISSIONS,
   ADMIN: ADMIN_PERMISSIONS,
-  SUPERADMIN: [...ADMIN_PERMISSIONS, Permission.ManageAdmins],
+  SUPERADMIN: [...ADMIN_PERMISSIONS, Permission.ViewAllStats, Permission.ManageAdmins],
 };
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {
